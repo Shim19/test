@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>ddd2</title>
+</head>
+<body>
+
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script>
+    function drawLineArrow(x1, y1, x2, y2) {
+        var path;
+        var slopy, cosy, siny;
+        var Par = 10.0;
+        var x3, y3;
+        slopy = Math.atan2((y1 - y2), (x1 - x2));
+        cosy = Math.cos(slopy);
+        siny = Math.sin(slopy);
+
+        path = "M" + x1 + "," + y1 + " L" + x2 + "," + y2;
+
+        x3 = x2;
+        y3 = y2;
+
+        path += " M" + x3 + "," + y3;
+
+        path += " L" + (Number(x3) + Number(Par * cosy - (Par / 2.0 * siny))) + "," + (Number(y3) + Number(Par * siny + (Par / 2.0 * cosy)));
+
+        path += " M" + (Number(x3) + Number(Par * cosy + Par / 2.0 * siny) + "," + (Number(y3) - Number(Par / 2.0 * cosy - Par * siny)));
+        path += " L" + x3 + "," + y3;
+
+        return path;
+    }
+
+    //延迟时间单位
+    var delayTime = 600;
+    var width = 900,
+        height = 300,
+        cellSize = 150;
+
+    d3.csv("flowchart_2.csv", function (error, data) {
+        if (error) return console.error(error);
+        console.log(data[1].text);
+
+        for (var i = 0; i < data.length; i++) {
+            data[i].text = data[i].text.split("|");
+        }
+        console.log(data);
+
+
+        var svg = d3.select("body")
+                        .selectAll("svg")
+                        .data([1])
+                        .enter()
+                        .append("svg")
+                        .attr("width", width)
+                        .attr("height", height)
+                        .append("g")
+                        .attr("transform", "translate(" + (10) + "," + (30) + ")")
+                ;
+ 
+        var cycle = svg.append("g")
+                        .selectAll("circle")
+                        .data(data)
+                        .enter()
+                        .append("circle")
+                        .attr("cx", function (d) {
+                            return cellSize * d.row - cellSize / 2;
+                        })
+                        .attr("cy", function (d) {
+                            if (d.column == "2") {
+                                return parseInt(d.y) + d.height * 0.75;
+                            }
+                            else {
+                                return parseInt(d.y) + d.height / 2;
+                            }
+                        })
+                        .attr("r", function (d) {
+                            if (d.cycle == "Y") {
+                                return cellSize * 0.35;
+                            } else {
+                                return;
+                            }
+                        })
+                        .attr("fill", "white")
+                        .transition()
+						.duration(300)
+                        .delay(function (d) {
+                            return delayTime * d.sequence;
+                        })
+                        // .delay(function(d) {return 300*d.sequence;
+                        // })
+                     .attr("fill", function(d){if (d.ID<=9 || d.ID==27 ) {return "steelblue";}
+					 else {return "#548B54";}})
+                      
+                ;
+        var dx = 17, dy = 17;
+
+        var text1 = svg.append("g")
+                .attr("fill", "white")
+                .attr("font-size", "10px")
+				.attr("text-anchor", "middle")
+                .selectAll("text")
+                .data(data)
+                .enter()
+                .append("text")
+                .attr("x", function (d) {
+                    return cellSize * d.row - cellSize / 2 - dx;
+                })
+                .attr("y", function (d) {
+                    if (d.column == "2") {
+                        return parseInt(d.y) + d.height * 0.75 - dy + 2;
+                    }
+                    else {
+                        return parseInt(d.y) + d.height / 2 - dy + 2;
+                    }
+                })
+                .attr("dx", dx)
+                .attr("dy", dy)
+				//.text(function (d) {
+                //    if (d.cycle == "Y") {
+                 //       return d.text;
+                 //   }
+                //})
+               ;
+		var sequence = {};
+        var id = {};
+        data.forEach(function (item) {
+            item.text.forEach(function (text) {
+                sequence[text] = item.sequence;
+                id[text] = item.ID - 1;
+            })
+        });		
+			
+	
+            text1.selectAll("tspan")
+                .data(function (d, i) {
+                    if (data[i].cycle == "Y")
+                        return data[i].text;
+                    else return "";
+                })
+                .enter()
+                .append("tspan")
+                .attr("dx", function (d, i) {
+                    if (data[id[d]].text.length != 1) {
+                        var j = data[id[d]].text.indexOf(d);
+                        if (j != 0) {
+                            var text = data[id[d]].text;
+                            return 0 - text[j - 1].length*13 ;
+                        }
+                    }
+                })
+                .attr("textLength", function (d, i) {
+                    return d.length * 12;
+                })
+                .attr("dy", function (d) {
+                    var j = data[id[d]].text.indexOf(d);
+                    console.log(d, data[id[d]].text, j);
+                    if (j == 0) {
+                        return 0 ;
+                    } else {
+                        return 14;
+                    }
+                })
+                .text(function (d) {
+                    return d;
+                })
+				.attr("font-size", "14px")
+                .attr("fill", "white")
+				.attr("text-anchor", "middle")
+                .transition()
+				.duration(300)
+                .delay(function (d) {
+                    return delayTime * data[id[d]].sequence;
+                })
+                ;
+				
+				
+				
+				
+				
+ 
+
+        var line1 = svg.append("g")
+                .selectAll("line")
+                .data(data)
+                .enter()
+                .append("path")
+                .attr("d", function (d) {
+                    var x1, x2, y1, y2;
+                    if (d.column == "1") {
+                        x1 = cellSize * d.row - 140;
+                        x2 = cellSize * d.row - 20;
+                    } else {
+                        x1 = cellSize * d.row - 20;
+                        x2 = cellSize * d.row - 80;
+                    }
+                    if (d.column == "2") {
+                        y1 = parseInt(d.y) + d.height * 0.75;
+                        y2 = parseInt(d.y) + d.height * 0.75;
+                    }
+                    else {
+                        y1 = parseInt(d.y) + d.height / 2;
+                        y2 = parseInt(d.y) + d.height / 2;
+                    }
+                    return drawLineArrow(x1, y1, x2, y2);
+                })
+                .attr("stroke-width", function (d) {
+                    if (d.line == "Y") {
+                        return 3;
+                    } else {
+                        return 0;
+                    }
+                })
+                .attr("stroke", "white")
+                .transition()
+				.duration(300)
+                .delay(function (d) {
+                    return delayTime * d.sequence;
+                })
+                .attr("stroke", "#FF8C00")
+
+        
+
+        var text2 = svg.append("g")
+                        .attr("fill", "black")
+                        .attr("font-size", "12px")
+                        .attr("text-anchor", "middle")
+                        .selectAll("text")
+                        .data(data)
+                        .enter()
+                        .append("text")
+                        .attr("x", function (d) {
+                                    return cellSize * d.row - 80;
+                                }
+                        )
+                        .attr("y", function (d) {
+                            if (d.column == "2") {
+                                return parseInt(d.y) + d.height * 0.75;
+                            }
+                            else {
+                                return parseInt(d.y) + d.height / 2;
+                            }
+                        })
+                        .attr("dx", 25)
+                        .attr("dy", -2 * dy)
+                ;
+
+
+        text2.selectAll("tspan")
+                .data(function (d, i) {
+                    if (data[i].line == "Y")
+                        return data[i].text;
+                    else return "";
+                })
+                .enter()
+                .append("tspan")
+                //                .attr("x", function (d) {
+                //                })
+                .attr("dx", function (d, i) {
+                    if (data[id[d]].text.length != 1) {
+                        var j = data[id[d]].text.indexOf(d);
+                        if (j != 0) {
+                            var text = data[id[d]].text;
+                            return 0 - text[j - 1].length * 12;
+                        }
+                    }
+                })
+                .attr("textLength", function (d, i) {
+                    return d.length * 12;
+                })
+                .attr("dy", function (d) {
+                    var j = data[id[d]].text.indexOf(d);
+                    console.log(d, data[id[d]].text, j);
+                    if (j == 0) {
+                        return 0 - (data[id[d]].text.length * 14 - 8);
+                    } else {
+                        return 14;
+                    }
+                })
+                .text(function (d) {
+                    return d;
+                })
+                .attr("fill", "white")
+                .transition()
+				.duration(300)
+                .delay(function (d) {
+                    return delayTime * data[id[d]].sequence;
+                })
+                .attr("fill", "black");
+
+
+        var line2 = svg.append("g")
+                .selectAll("line")
+                .data(data)
+                .enter()
+                .append("path")
+                .attr("d", function (d) {
+                    var x1, x2, y1, y2;
+                    y1 = parseInt(d.y) + 20;
+                    x1 = cellSize * d.row - cellSize / 2;
+                    y2 = parseInt(d.y) + 180;
+                    x2 = cellSize * d.row - cellSize / 2;
+                    return drawLineArrow(x1, y1, x2, y2);
+                })
+                .attr("stroke", "white")
+                .transition()
+                .duration(300)
+				.delay(function (d) {
+                    return delayTime * d.sequence;
+                })
+                .attr("stroke", "#FF8C00")
+                .attr("stroke-width", function (d) {
+                    if (d.vertical == "Y") {
+                        return 3;
+                    } else {
+                        return 0;
+                    }
+                });
+
+        var text3 = svg.append("g")
+                .attr("fill", "black")
+                .attr("font-size", "12px")
+                .attr("text-anchor", "middle")
+                .selectAll("text")
+                .data(data)
+                .enter()
+                .append("text")
+                .attr("x", function (d) {
+                    return 750
+                })
+                .attr("y", function (d) {
+                    return parseInt(d.y) + 40;
+                })
+                .attr("dx", 130)
+                .attr("dy", 35)
+
+        text3.selectAll("tspan")
+                .data(function (d, i) {
+                    if (data[i].vertical == "Y")
+                        return data[i].text;
+                    else return "";
+                })
+                .enter()
+                .append("tspan")
+                .attr("dx", function (d, i) {
+                    if (data[id[d]].text.length != 1) {
+                        var j = data[id[d]].text.indexOf(d);
+                        if (j != 0) {
+                            var text = data[id[d]].text;
+                            return 0 - text[j - 1].length * 12;
+                        }
+                    }
+                })
+                .attr("textLength", function (d, i) {
+                    return d.length * 12;
+                })
+                .attr("dy", function (d) {
+                    var j = data[id[d]].text.indexOf(d);
+                    console.log(d, data[id[d]].text, j);
+                    if (j == 0) {
+                        return 45;
+                    } else {
+                        return 14;
+                    }
+                })
+                .text(function (d) {
+                    return d;
+                })
+                .attr("fill", "white")
+                .transition()
+				.duration(300)
+                .delay(function (d) {
+                    return delayTime * data[id[d]].sequence;
+                })
+                .attr("fill", "black");
+
+    })
+
+</script>
+</body>
+</html>
